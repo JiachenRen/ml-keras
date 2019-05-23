@@ -70,7 +70,7 @@ class BaseModel:
         self.keras_model.save_weights("models/%s/model.h5" % self.name)
         print("Saved model to disk")
 
-    def run(self):
+    def train_and_save(self):
         self.train()
         self.evaluate()
         self.serialize()
@@ -90,7 +90,7 @@ class BaseModel:
     def _testing_img_at(self, idx):
         return self.x_test[idx].reshape(self.input_shape[0], self.input_shape[1])
 
-    def demo(self):
+    def run_demo(self):
         self._prepare_data()
         indices = list(range(0, self.x_test.shape[0], 10))
         np.random.shuffle(indices)

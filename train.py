@@ -6,4 +6,4 @@ training_data, testing_data = mnist.load_data()
 
 # Create, fit, evaluate, and then save the specified model.
 model = BaseModel(training_data, testing_data)
-model.run()
+model.train_and_save()
