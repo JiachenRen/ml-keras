@@ -28,15 +28,23 @@ class Model:
             self.keras_model = self.baseline_model()
         elif name == "cnn_baseline":
             self.keras_model = self.baseline_cnn_model()
+        elif name == "cnn_large":
+            self.keras_model = self.large_cnn_model()
+        elif name == "cnn_custom1":
+            self.keras_model = self.custom_cnn_model1()
         else:
             raise Exception("Model %s does not exist." % name)
 
     # Baseline model with 1 hidden fully connected layer
     def baseline_model(self):
         num_pixels = self.input_shape[0] * self.input_shape[1]
+
+        # Setup
         model = Sequential()
         model.add(Dense(num_pixels, input_dim=num_pixels, kernel_initializer='normal', activation='relu'))
         model.add(Dense(self.num_classes, kernel_initializer='normal', activation='softmax'))
+
+        # Compile
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         return model
 
@@ -56,6 +64,35 @@ class Model:
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         return model
 
+    # CNN model with state of the art performance (I made slight adjustments)
+    def large_cnn_model(self):
+
+        # Setup
+        model = Sequential()
+        model.add(Conv2D(30, (5, 5), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(5, 5)))
+        model.add(Conv2D(15, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(128, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(50, activation='relu'))
+        model.add(Dense(self.num_classes, activation='softmax'))
+
+        # Compile model
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        return model
+
+    # Custom CNN model
+    def custom_cnn_model1(self):
+        model = Sequential()
+        model.add(Conv2D(10, (20, 20), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation="relu"))
+        model.add(Flatten())
+        model.add(Dense(self.num_classes, activation='softmax'))
+
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        return model
+
     # Train/fit the model
     def train(self):
         print("Training " + self.name)
@@ -64,7 +101,7 @@ class Model:
             num_pixels = self.x_train.shape[1] * self.x_train.shape[2]
             self.x_train = self.x_train.reshape(self.x_train.shape[0], num_pixels).astype('float32')
             self.x_test = self.x_test.reshape(self.x_test.shape[0], num_pixels).astype('float32')
-        elif self.name == "cnn_baseline":
+        elif self.name == "cnn_baseline" or self.name == "cnn_large" or self.name == "cnn_custom1":
             self.x_train = np.expand_dims(self.x_train, 3)
             self.x_test = np.expand_dims(self.x_test, 3)
 
