@@ -1,13 +1,14 @@
 from keras import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
+from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, GaussianNoise
+from keras.callbacks import LearningRateScheduler
 import numpy as np
 from base_model import BaseModel
 
 
 class ConvModel(BaseModel):
 
-    def __init__(self, training_data, testing_data):
-        super().__init__(training_data, testing_data)
+    def __init__(self, training_data, testing_data, epochs=10, batch_size=200):
+        super().__init__(training_data, testing_data, epochs, batch_size)
         self.name = "cnn_baseline"
 
     # Baseline model for CNN with one convolution layer, max pooling, and dropout.
@@ -32,18 +33,48 @@ class ConvModel(BaseModel):
         return self.x_test[idx].squeeze()
 
 
+def lr_scheduler(epoch, lr):
+    if epoch < 5:
+        lr = 0.005
+    elif epoch <= 10:
+        lr = 0.001
+    else:
+        lr = 0.0001
+    return lr
+
+
 class CustomConvModel(ConvModel):
 
     def __init__(self, training_data, testing_data):
-        super().__init__(training_data, testing_data)
+        super().__init__(training_data, testing_data, 20, 200)
         self.name = "cnn_custom1"
 
-    def _make_model(self):
-        model = Sequential()
-        model.add(Conv2D(10, (20, 20), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation="relu"))
-        model.add(Flatten())
-        model.add(Dense(self.num_classes, activation='softmax'))
+    def train(self):
+        print("Training " + self.name)
+        self._prepare_data()
+        self.keras_model.fit(
+            self.x_train,
+            self.y_train,
+            validation_data=(self.x_test, self.y_test),
+            epochs=self.epochs,
+            batch_size=self.batch_size,
+            verbose=2,
+            callbacks=[LearningRateScheduler(lr_scheduler, verbose=1)]
+        )
 
+    def _make_model(self):
+        # Setup
+        model = Sequential()
+        model.add(Conv2D(30, (5, 5), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation="relu"))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Conv2D(20, (4, 4), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(100, activation='relu'))
+        model.add(Dropout(0.3))
+        model.add(Dense(30, activation='relu'))
+        model.add(Dense(self.num_classes, activation='softmax'))
+        # Compile
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         return model
 

@@ -4,16 +4,19 @@ from keras.layers import Dense
 from keras.models import model_from_json
 from keras.utils import np_utils
 import matplotlib.pyplot as plt
+import coremltools
 import numpy as np
 
 
 class BaseModel:
 
-    def __init__(self, training_data, testing_data):
+    def __init__(self, training_data, testing_data, epochs=10, batch_size=200):
         self.x_train = training_data[0]
         self.y_train = training_data[1]
         self.x_test = testing_data[0]
         self.y_test = testing_data[1]
+        self.epochs = epochs
+        self.batch_size = batch_size
 
         self.__preprocess_data()
 
@@ -53,11 +56,12 @@ class BaseModel:
             self.x_train,
             self.y_train,
             validation_data=(self.x_test, self.y_test),
-            epochs=10,
-            batch_size=200,
+            epochs=self.epochs,
+            batch_size=self.batch_size,
             verbose=2)
 
     def evaluate(self):
+        print("Evaluating...")
         scores = self.keras_model.evaluate(self.x_test, self.y_test, verbose=0)
         print("Error: %.2f%%" % (100 - scores[1] * 100))
 
@@ -70,6 +74,29 @@ class BaseModel:
         self.keras_model.save_weights("models/%s/model.h5" % self.name)
         print("Saved model to disk")
 
+    def export_as_mlmodel(self):
+        base_url = "models/%s/" % self.name
+        self.load_from_disk()
+        h5_url = base_url + "digit_recognition.h5"
+        self.keras_model.save(h5_url)
+        output_labels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        model = coremltools.converters.keras.convert(
+            h5_url,
+            input_names=['image'],
+            output_names=['output'],
+            class_labels=output_labels,
+            image_input_names='image'
+        )
+
+        # Set model meta data
+        model.author = 'Jiachen Ren'
+        model.short_description = 'Digit Recognition with MNIST'
+        model.input_description['image'] = 'An image of a handwritten digit'
+        model.output_description['output'] = 'Prediction of digit from 0 ~ 9'
+
+        # Export model
+        model.save(base_url + 'digit_recognition.mlmodel')
+
     def train_and_save(self):
         self.train()
         self.evaluate()
@@ -77,7 +104,7 @@ class BaseModel:
 
     def load_from_disk(self):
         # Load & compile model from disk
-        print("Loading %s from disk...")
+        print("Loading %s from disk..." % self.name)
         json_file = open('models/%s/model.json' % self.name, 'r')
         loaded_model_json = json_file.read()
         json_file.close()
