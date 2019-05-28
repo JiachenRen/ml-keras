@@ -18,19 +18,28 @@ class BaseModel:
         self.epochs = epochs
         self.batch_size = batch_size
 
-        self.__preprocess_data()
+        self._normalize_input()
+        self._one_hot_encode_labels()
 
         self.input_shape = (self.x_train.shape[1], self.x_train.shape[2])
         self.num_pixels = self.input_shape[0] * self.input_shape[1]
         self.num_classes = self.y_test.shape[1]
         self.keras_model = self._make_model()
-        self.name = "base_model"
 
-    def __preprocess_data(self):
-        # Normalize inputs from 0-255 to 0-1
+        # metadata
+        self.name = "base_model"
+        self.output_labels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        self.short_description = 'Digit Recognition with MNIST'
+        self.input_description = 'An image of a handwritten digit'
+        self.output_description = 'Prediction of digit from 0 ~ 9'
+
+    # Normalize inputs from 0-255 to 0-1
+    def _normalize_input(self):
         self.x_train = self.x_train / 255
         self.x_test = self.x_test / 255
-        # One hot encode outputs
+
+    # One hot encode outputs
+    def _one_hot_encode_labels(self):
         self.y_train = np_utils.to_categorical(self.y_train)
         self.y_test = np_utils.to_categorical(self.y_test)
 
@@ -79,20 +88,19 @@ class BaseModel:
         self.load_from_disk()
         h5_url = base_url + "digit_recognition.h5"
         self.keras_model.save(h5_url)
-        output_labels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
         model = coremltools.converters.keras.convert(
             h5_url,
             input_names=['image'],
             output_names=['output'],
-            class_labels=output_labels,
+            class_labels=self.output_labels,
             image_input_names='image'
         )
 
         # Set model meta data
         model.author = 'Jiachen Ren'
-        model.short_description = 'Digit Recognition with MNIST'
-        model.input_description['image'] = 'An image of a handwritten digit'
-        model.output_description['output'] = 'Prediction of digit from 0 ~ 9'
+        model.short_description = self.short_description
+        model.input_description['image'] = self.input_description
+        model.output_description['output'] = self.output_description
 
         # Export model
         model.save(base_url + 'digit_recognition.mlmodel')

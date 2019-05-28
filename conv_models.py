@@ -1,7 +1,9 @@
 from keras import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, GaussianNoise
+from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, AveragePooling2D
 from keras.callbacks import LearningRateScheduler
 import numpy as np
+from keras.utils import np_utils
+
 from base_model import BaseModel
 
 
@@ -86,7 +88,6 @@ class LargeConvModel(ConvModel):
         self.name = "cnn_large"
 
     def _make_model(self):
-
         # Setup
         model = Sequential()
         model.add(Conv2D(30, (5, 5), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation='relu'))
@@ -97,6 +98,65 @@ class LargeConvModel(ConvModel):
         model.add(Dense(128, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(50, activation='relu'))
+        model.add(Dense(self.num_classes, activation='softmax'))
+
+        # Compile model
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        return model
+
+
+class SuperConvModel(ConvModel):
+
+    def __init__(self, training_data, testing_data):
+        super().__init__(training_data, testing_data, epochs=10, batch_size=20)
+        self.name = "cnn_super"
+
+    def _make_model(self):
+        # Setup
+        model = Sequential()
+        model.add(Conv2D(20, (5, 5), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Conv2D(10, (5, 5), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(200, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(100, activation='relu'))
+        model.add(Dense(50, activation='relu'))
+        model.add(Dense(self.num_classes, activation='softmax'))
+
+        # Compile model
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        return model
+
+
+class LettersConvModel(ConvModel):
+
+    def __init__(self, training_data, testing_data):
+        super().__init__(training_data, testing_data, epochs=5, batch_size=200)
+        self.name = "cnn_letter"
+        self.input_description = "An image of capital letter"
+        self.output_description = "Prediction of letter from A to Z"
+        self.short_description = 'Predicts a handwritten capital letter'
+        self.output_labels = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
+    def _one_hot_encode_labels(self):
+        to_ints = np.vectorize(lambda x: ord(x.lower()) - 97)
+        def encode(y): return np_utils.to_categorical(to_ints(y), 26)
+        self.y_train = encode(self.y_train)
+        self.y_test = encode(self.y_test)
+
+    def _make_model(self):
+        # Setup
+        model = Sequential()
+        model.add(Conv2D(30, (10, 10), input_shape=(self.input_shape[0], self.input_shape[1], 1), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Conv2D(20, (5, 5), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Flatten())
+        model.add(Dense(200, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(100, activation='relu'))
         model.add(Dense(self.num_classes, activation='softmax'))
 
         # Compile model
