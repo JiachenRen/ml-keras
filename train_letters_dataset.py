@@ -1,3 +1,4 @@
+import use_plaidml_backend
 from sklearn.model_selection import train_test_split
 from conv_models import LettersConvModel
 from dataset_utils import expand_dataset, load_dataset
